@@ -118,38 +118,49 @@ def partition(num):
     right = num[half if len(num)%2 == 0 else ((half)+1):]
     return (left, right)
 
-#shifts strings by desired amounts and places them in lists
+#shifts strings(x) by desired amounts and places the halves as a tuple in pairs list and the halves together in the full pairs list
 def shift(pairs, fullPairs, x, num):
     left = pairs[x][0][num:] + pairs[x][0][0:num]
     right = pairs[x][1][num:] + pairs[x][1][0:num]
     pairs.append((left,right))
     fullPairs.append((left + right))
 
-# uses input data and key to find rows and columns on each graph to create a new binary string
+#uses 32 bit half data input and key to find rows and columns on each graph to create a new binary string
 def encode(right, key):
     newRight = ""
+    #expand right half of data using e table from 32 bits into 48 bits
     for n in e:
         newRight += right[n-1]
-
+    #XOR data with given subkey
     result = int(newRight, 2)^int(key,2)    
     rightPlus = (bin(result)[2:].zfill(len(newRight)))
     rightPlusPlus = ""
+    #split XOR'd data into 6 bit intervals
     for x in range(len(rightPlus)//6):
         y = x * 6
+        #for each group of 6 take the outer 2 bits as the row number eg. 100101 = 11
         row = int((rightPlus[y:y+1] + rightPlus[y+5:y+6]),2)
+        #and the inner 4 bits as the column number eg. 100101 = 0010
         col = int(rightPlus[y+1:y+5], 2)
+        #then create a new binary string using output from row and columns
         rightPlusPlus += str(bin(sList[x][row][col]))[2:].zfill(4)
     
     final = ""
+    #permute result with table p
     for n in p:
         final += rightPlusPlus[n-1]
     return final
 
-#uses standard DES encryption to 
+#encryptes data using the DES encryption algorithm
 def encrypt(message, key):
+    #first use the key to create 16 subkeys
     bkey = bin(int('1'+ key, 16))[3:]
     keyPlus = ""
-    #permute data for the first time
+    #permute key for the first time with pc1
+
+    # to permute, take first number in pc1 (57), the first bit of the new created key will
+    # be the bit in place 57 of the original key. Repeat this for all of the numbers in pc1
+
     for n in pc1:
         keyPlus += bkey[n-1]
 
@@ -160,7 +171,7 @@ def encrypt(message, key):
 
     pairs.append(halves)
     fullPairs.append(halves[0] + halves [1])
-    #shift binary over either 1 or 2 times, then add them to list of binary strings
+    #shift binary over either 1 or 2 times, then add them to list of binary string subkeys
     for x in range(2):
         shift(pairs, fullPairs, x, 1)
   
@@ -175,14 +186,17 @@ def encrypt(message, key):
     shift(pairs, fullPairs, 15, 1)
 
     keyList = []
+    #permute each subkey with table pc2
     for i in fullPairs:
         newKey = ''
         for j in pc2:
             newKey += i[j-1]
         keyList.append(newKey) 
-
+    
+    #subkey list is done, encode original data
     bmessage = bin(int('1'+ message, 16))[3:]
     mPlus = ""
+    #permute data with list ip
     for n in ip:
         mPlus += bmessage[n-1]
 
@@ -190,21 +204,21 @@ def encrypt(message, key):
 
     lh = halves[0]
     rh = halves[1]
-    #encode data using s-blocks
+    #encode right hand data using s-blocks 16 times, set left hand = right hand
     for x in range(16):
         temp1 = encode(rh, keyList[x+1])
         temp2 = int(temp1, 2)^int(lh,2)
         lh = rh
         rh = bin(temp2)[2:].zfill(len(temp1))
-
+    #revers left and right hand
     rightLeft = rh + lh
-    #finally permute binary with list 
+    #finally permute binary with list ipNeg
     final = ""
     for n in ipNeg:
         final += rightLeft[n-1]
 
     final = int(final, 2)
-      
+    #output result in hexadecimal
     final = hex(final)[2:]
 
     print(final)
